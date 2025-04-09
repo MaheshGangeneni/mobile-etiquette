@@ -1,0 +1,235 @@
+import json
+import os
+from datetime import datetime
+
+class MobileEtiquetteSystem:
+    def __init__(self):
+        self.rules_file = "etiquette_rules.json"
+        self.prefs_file = "user_preferences.json"
+        self.etiquette_rules = self.load_rules()
+        self.user_prefs = self.load_preferences()
+        
+    def load_rules(self):
+        """Load etiquette rules from JSON file"""
+        default_rules = {
+            "locations": {
+                "restaurant": {
+                    "ringtone": "silent",
+                    "calls": "avoid",
+                    "texting": "discreet",
+                    "photos": "avoid",
+                    "description": "Keep your phone silent and avoid taking calls in restaurants."
+                },
+                "meeting": {
+                    "ringtone": "silent",
+                    "calls": "avoid",
+                    "texting": "avoid",
+                    "photos": "avoid",
+                    "description": "Silence your phone and give full attention to the meeting."
+                },
+                "public_transport": {
+                    "ringtone": "vibrate",
+                    "calls": "brief",
+                    "texting": "okay",
+                    "photos": "avoid",
+                    "description": "Keep conversations brief and volume low on public transport."
+                },
+                "cinema": {
+                    "ringtone": "silent",
+                    "calls": "avoid",
+                    "texting": "avoid",
+                    "photos": "prohibited",
+                    "description": "Absolutely no phone use during movies in the cinema."
+                },
+                "home": {
+                    "ringtone": "normal",
+                    "calls": "okay",
+                    "texting": "okay",
+                    "photos": "okay",
+                    "description": "Normal phone use is acceptable at home."
+                }
+            }
+        }
+        
+        try:
+            with open(self.rules_file, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            with open(self.rules_file, 'w') as f:
+                json.dump(default_rules, f, indent=4)
+            return default_rules
+    
+    def load_preferences(self):
+        """Load user preferences from JSON file"""
+        default_prefs = {
+            "current_location": "home",
+            "custom_rules": {},
+            "notification_prefs": {
+                "reminders": True,
+                "time_based": True,
+                "morning_quiet_hours": "08:00-10:00",
+                "evening_quiet_hours": "20:00-22:00"
+            }
+        }
+        
+        try:
+            with open(self.prefs_file, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            with open(self.prefs_file, 'w') as f:
+                json.dump(default_prefs, f, indent=4)
+            return default_prefs
+    
+    def save_preferences(self):
+        """Save user preferences to file"""
+        with open(self.prefs_file, 'w') as f:
+            json.dump(self.user_prefs, f, indent=4)
+    
+    def get_current_rules(self):
+        """Get rules for current location"""
+        location = self.user_prefs.get("current_location", "home")
+        return self.etiquette_rules["locations"].get(location, {})
+    
+    def set_location(self, location):
+        """Set current location"""
+        if location in self.etiquette_rules["locations"]:
+            self.user_prefs["current_location"] = location
+            self.save_preferences()
+            return True
+        return False
+    
+    def add_custom_rule(self, location, rules):
+        """Add custom rule for a location"""
+        self.user_prefs["custom_rules"][location] = rules
+        self.save_preferences()
+    
+    def check_etiquette(self, action):
+        """Check if an action is appropriate for current location"""
+        current_rules = self.get_current_rules()
+        
+        # Check custom rules first
+        custom_rules = self.user_prefs["custom_rules"].get(
+            self.user_prefs["current_location"], {}
+        )
+        
+        rule = custom_rules.get(action, current_rules.get(action, "okay"))
+        
+        if rule in ["avoid", "prohibited"]:
+            return False, f"It's not appropriate to {action} here. {current_rules.get('description', '')}"
+        return True, f"{action.capitalize()} is acceptable here."
+    
+    def time_based_check(self):
+        """Check if current time falls in quiet hours"""
+        if not self.user_prefs["notification_prefs"]["time_based"]:
+            return True, ""
+            
+        now = datetime.now().time()
+        
+        def parse_time(time_str):
+            return datetime.strptime(time_str, "%H:%M").time()
+        
+        morning_start, morning_end = self.user_prefs["notification_prefs"]["morning_quiet_hours"].split("-")
+        evening_start, evening_end = self.user_prefs["notification_prefs"]["evening_quiet_hours"].split("-")
+        
+        if (parse_time(morning_start) <= now <= parse_time(morning_end)) or \
+           (parse_time(evening_start) <= now <= parse_time(evening_end)):
+            return False, "Currently in quiet hours. Consider silencing your phone."
+        return True, ""
+    
+    def display_current_rules(self):
+        """Display rules for current location"""
+        location = self.user_prefs["current_location"]
+        rules = self.get_current_rules()
+        custom_rules = self.user_prefs["custom_rules"].get(location, {})
+        
+        print(f"\n=== Etiquette Rules for {location.capitalize()} ===")
+        for key, value in rules.items():
+            if key != "description":
+                custom_value = custom_rules.get(key, "")
+                print(f"{key.capitalize()}: {value} {f'(Custom: {custom_value})' if custom_value else ''}")
+        print(rules.get("description", ""))
+        
+        # Show time-based status
+        status, message = self.time_based_check()
+        if not status:
+            print(f"\nTime-based Alert: {message}")
+
+def main():
+    system = MobileEtiquetteSystem()
+    
+    while True:
+        print("\nMobile Etiquette System")
+        print("1. View current etiquette rules")
+        print("2. Change location")
+        print("3. Check if an action is appropriate")
+        print("4. Add custom rule for current location")
+        print("5. View all locations")
+        print("6. Edit quiet hours")
+        print("7. Exit")
+        
+        choice = input("Enter your choice: ")
+        
+        if choice == "1":
+            system.display_current_rules()
+            
+        elif choice == "2":
+            print("\nAvailable locations:")
+            for location in system.etiquette_rules["locations"]:
+                print(f"- {location}")
+            new_loc = input("Enter location: ").lower()
+            if system.set_location(new_loc):
+                print(f"Location changed to {new_loc}.")
+            else:
+                print("Invalid location.")
+                
+        elif choice == "3":
+            action = input("Enter action to check (ringtone/calls/texting/photos): ").lower()
+            allowed, message = system.check_etiquette(action)
+            print(f"\n{message}")
+            if not allowed:
+                time_status, time_msg = system.time_based_check()
+                if not time_status:
+                    print(time_msg)
+                    
+        elif choice == "4":
+            location = system.user_prefs["current_location"]
+            print(f"\nAdding custom rule for {location}:")
+            action = input("Enter action (ringtone/calls/texting/photos): ").lower()
+            rule = input("Enter rule (okay/avoid/prohibited/discreet/silent/vibrate/brief): ").lower()
+            system.add_custom_rule(location, {action: rule})
+            print("Custom rule added.")
+            
+        elif choice == "5":
+            print("\nAvailable locations and their default rules:")
+            for loc, rules in system.etiquette_rules["locations"].items():
+                print(f"\n{loc.capitalize()}:")
+                for k, v in rules.items():
+                    if k != "description":
+                        print(f"  {k}: {v}")
+            
+        elif choice == "6":
+            print("\nCurrent quiet hours:")
+            prefs = system.user_prefs["notification_prefs"]
+            print(f"Morning: {prefs['morning_quiet_hours']}")
+            print(f"Evening: {prefs['evening_quiet_hours']}")
+            
+            new_morning = input("Enter new morning quiet hours (HH:MM-HH:MM): ")
+            new_evening = input("Enter new evening quiet hours (HH:MM-HH:MM): ")
+            
+            if new_morning:
+                system.user_prefs["notification_prefs"]["morning_quiet_hours"] = new_morning
+            if new_evening:
+                system.user_prefs["notification_prefs"]["evening_quiet_hours"] = new_evening
+            
+            system.save_preferences()
+            print("Quiet hours updated.")
+            
+        elif choice == "7":
+            print("Exiting Mobile Etiquette System.")
+            break
+            
+        else:
+            print("Invalid choice. Please try again.")
+
+if __name__ == "__main__":
+    main()

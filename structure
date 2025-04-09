@@ -1,0 +1,6 @@
+mobile_etiquette/
+│
+├── main.py                # Main program file
+├── etiquette_rules.json    # Database of etiquette rules
+├── user_preferences.json   # User-specific settings
+└── README.md              # Project documentation

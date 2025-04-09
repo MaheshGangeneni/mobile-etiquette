@@ -1,0 +1,29 @@
+ etiquette_rules.json
+
+This file will be automatically created by the program if it doesn't exist, with the default rules shown in the `main.py` file.
+
+
+user_preferences.json
+
+This file will be automatically created by the program if it doesn't exist, with the default preferences shown in the `main.py` file.
+
+
+Features
+
+1. Location-based Etiquette Rules**: Predefined rules for different locations (restaurant, meeting, etc.)
+2. Custom Rules**: Users can add their own rules for specific locations
+3. Time-based Alerts**: Quiet hours when users should be more considerate
+4. Action Checking**: Verify if specific actions (calls, texting) are appropriate
+5. Persistent Storage**: All rules and preferences are saved to files
+
+
+How to Use
+
+1. Run the `main.py` file
+2. Use the menu to:
+   - View current etiquette rules
+   - Change your current location
+   - Check if an action is appropriate
+   - Add custom rules
+   - View all available locations
+   - Edit quiet hours
